@@ -1,0 +1,327 @@
+stringescapes {}
+
+/* NOTE: This is not a correct Snowball file. It is ukrainian.sbl with all
+ * replacements strings like "{zh}" replaced by actual characters like "ж"
+ * for ease of human reading.
+ */
+
+routines (
+  prelude
+  mark_regions R2
+  min_len
+  short_word_4l
+  short_word_5l
+  long_word
+  perfective_gerund
+  reflexive
+  long_endings
+  adjective
+  adjectival
+  verb
+  noun
+  remove_last_letter
+  remove_last_2_letters
+  remove_last_2_vowels
+  remove_vowel_before_vowel
+  remove_last_vowel
+  derivational
+  tidy_up
+)
+
+externals ( stem )
+
+integers ( pV p2 )
+
+groupings ( v )
+
+define v 'аеєиіїоуюя'
+
+define prelude as (
+  do repeat ( goto (['ґ']) <- 'г' )
+
+  // Remove any apostrophe-like symbols
+  do repeat ( goto (['{'}']) delete )
+  do repeat ( goto (['ʹ']) delete )
+  do repeat ( goto (['ʻ']) delete )
+  do repeat ( goto (['ʼ']) delete )
+  do repeat ( goto (['ʽ']) delete )
+  do repeat ( goto (['ˈ']) delete )
+  do repeat ( goto (['‘']) delete )
+  do repeat ( goto (['’']) delete )
+  do repeat ( goto (['‛']) delete )
+  do repeat ( goto (['′']) delete )
+)
+
+define mark_regions as (
+  $pV = limit
+  $p2 = limit
+  do (
+    gopast v   setmark pV     gopast non-v
+    gopast v   gopast non-v   setmark p2
+  )
+)
+
+backwardmode (
+  define R2 as $p2 <= cursor
+
+  define perfective_gerund as (
+    [substring] among (
+      'вши'   // написа|вши
+      'вшись'
+      'вшися'
+      'учи'
+      'ючи'
+      'ючись'
+      'ючися'
+      'ачи'
+      'ачись'
+      'ачися'
+      'лячи'
+      'лячись'
+      'лячися'
+      'ячи'
+      'ячись'
+      'ячися'
+        (delete)
+   )
+  )
+
+  define reflexive as (
+    [substring] among (
+      'ється' // смі|ється
+      'еться'
+      'ся'
+      'сь'
+        (delete)
+    )
+  )
+
+  define long_endings as (
+    [substring] among (
+      // nouns
+      'ість' 'істю' 'істи' 'істе' 'істського'
+      'енами'
+      'очки' 'очці' 'очку' 'очкою' 'очка'
+      'очко' 'очок' 'очкам' 'очками' 'очках'
+      'ості' 'ости' 'осте' 'остей' 'остям' 'остями' 'остях'
+      'ником' 'никові' 'нику' 'ників' 'ника' 'никам' 'никами' 'никах' 'ники' // need to remove ?
+      // 'ніком' 'нікові' 'ніку' 'ніків' 'ніка' 'нікам' 'ніками' 'ніках' 'ніки' // need to remove ?
+      'ців' 'цями'
+      'ків'
+
+      // female gender
+      'кою' 'кам' 'ками' 'ках'
+      'ською' 'ська' 'ську' 'сько'
+        (delete)
+    )
+  )
+
+  define adjective as (
+    [substring] among (
+      'ий' 'ого' 'ому' 'им' 'ім'                 // зел|ен.ий
+      'іший' 'ішого' 'ішому' 'ішим' 'ішім' 'іше' 'іш'
+      'ої' 'ій' 'ою'
+      'іша' 'ішої' 'ішій' 'ішу' 'ішою'
+      'их' 'ими'
+      'ний' 'на' 'не' 'ним' 'нім' 'ної' 'ну' 'ною' 'ній'  'них' 'ні' 'ник' 'но' 'ного' 'ними' 'ному'
+      'іші' 'іших' 'ішими'
+      'ього' 'ьому'
+      'ьої' 'ьою'
+      'іх' 'іми'
+      'ова' 'ове' 'во'
+      'їй' 'иїй'
+      'йому' 'ийому'
+      'єє' 'еє'
+      'ен' 'ена' 'ені' 'ене' 'ену' 'енам' 'ени' 'енів' 'еном'
+      'яча' 'яче' 'ячу' 'ячі'
+      'ача' 'аче' 'ачу' 'ачі'
+      'юча' 'юче' 'ючу' 'ючі'
+      'уча' 'уче' 'учу' 'учі'
+        (delete)
+    )
+  )
+
+  define adjectival as (
+    adjective
+
+    try (
+      [substring] among (
+        'ен' // зел|ен.ий
+        'ов' // абетк|ов.ого
+        'яч'
+        'ач'
+        'юч'
+        'уч'
+        (delete)
+      )
+    )
+  )
+
+  define verb as (
+    [substring] among (
+      'ав' 'али' 'ало' 'ала' 'ать' 'ати' // пізнав|ав
+      'іть'
+      'йте' 'ймо'
+      'ме'
+      'ла' 'ло' 'ли' 'лу'
+      'но'
+      //'ти' 'ть' 'те' // need to remove ?
+      'єш' 'ємо' 'єте' 'ють'
+      'еш' 'емо' 'ете' 'уть'
+      'лю' 'иш' 'ить' 'имо' 'ите' 'лять' 'ши'
+      'ляти'
+      'їш' 'їть' 'їмо' 'їте' 'ять' 'яти'
+        (delete)
+    )
+  )
+
+  define noun as (
+    [substring] among (
+      'ам' 'ами' 'ах' // вод|ам
+      'ар' 'арем' 'аря'
+      'ею'
+      'ям' 'ями' 'ях'
+      'ові' 'ом'
+      'ець' 'ем'
+      'ень'
+      'ой'
+      'ію' 'ії'
+      'ів'
+      'ев' 'ов' 'ей' 'иям' 'иях' 'ию'
+      'іям' 'іях' 'ія'
+      'ия' 'єю' 'еві' 'єм' 'еїв' 'їв'
+      'ією' 'иєю' 'еєю'
+      'ка' 'ки' 'ці' 'ку' 'ко' 'ок' // female gender
+      'ьї' 'ьє' 'ьєю' 'ью' 'ья'
+        (delete)
+    )
+  )
+
+  define remove_last_letter as (
+    [substring] among (
+      'а' 'в' 'е' 'є' 'и' 'і' 'ї' // NOUN: вод|а, VERB: вчи|в
+      'й' 'о' 'у' 'ь' 'ю' 'я'
+        (delete)
+    )
+  )
+
+  define remove_last_2_letters as ( // 2-letters from the all previous sets
+    [substring] among (
+      'ав' 'ам' 'ар' 'ах' 'ач'
+      'ев' 'еє' 'ей' 'ем' 'ен' 'еш' 'ею'
+      'єє' 'єм' 'єш' 'єю'
+      'ий' 'им' 'их' 'иш' 'ию' 'ия'
+      'ів' 'їв' 'ії' 'ій' 'їй' 'ім' 'іх' 'ію'
+      'їш'
+      'ла' 'ли' 'ло' 'лю' // аку|лі ?
+      'ме' // дія|ми ?
+      'ов' 'ої' 'ой' 'ом' 'ою' 'сь' 'ся'
+       //'ти' 'те' 'ть' // need to remove ?
+      'уч'
+      'ьє' 'ьї' 'ью' 'ья'
+      'юч'
+      'ям' 'ях' 'яч'
+        (delete)
+    )
+  )
+
+  define remove_last_vowel as (
+    [substring] among (
+      'а' 'е' 'є' 'и' 'і' 'ї'
+      'й' 'о' 'у' 'ь' 'ю' 'я'
+        (delete)
+    )
+  )
+
+  define remove_last_2_vowels as (
+    remove_vowel_before_vowel
+      and remove_last_vowel
+  )
+
+  define remove_vowel_before_vowel as (
+    [substring] among (
+      'а' 'е' 'є' 'и' 'і' 'ї' 'й' 'о' 'у' 'ь' 'ю' 'я'
+      ('а' or 'е' or 'є' or 'и' or 'і' or 'ї' or 'й' or 'о' or 'у' or 'ь' or 'ю' or 'я' delete )
+    )
+  )
+
+  define derivational as (
+    [substring] R2 among (
+      'іст' // незалежн|іст.тю
+      'ост'
+      'ень' 'еньк'
+      'ськ'
+      'ізм'
+        (delete)
+    )
+  )
+
+  define tidy_up as (
+    [substring] among (
+      'б' ('б' delete) // хоб|б.і
+      'в' ('в' delete)
+      'г' ('г' delete)
+      'д' ('д' delete) // усевлад|д.ям
+      'ж' ('ж' delete)
+      'з' ('з' delete)
+      'к' ('к' delete)
+      'л' ('л' delete)
+      'м' ('м' delete)
+      'н' ('н' delete)
+      'п' ('п' delete)
+      'р' ('р' delete)
+      'с' ('с' delete)
+      'т' ('т' delete)
+      'ф' ('ф' delete)
+      'ц' ('ц' delete)
+      'ч' ('ч' delete)
+      'ш' ('ш' delete)
+    )
+  )
+
+  define min_len as (
+    $(len >= 4)
+  )
+
+  define short_word_4l as (
+    $(len == 4) and (remove_last_2_vowels or remove_last_vowel)
+  )
+
+  define short_word_5l as (
+    $(len == 5) and (
+      remove_last_2_vowels
+        or remove_last_vowel
+        or remove_last_2_letters
+    ) or
+      $(len == 5) and do remove_last_vowel
+  )
+
+  define long_word as (
+    $(len > 5) and do (
+      do (
+        perfective_gerund or (
+          try reflexive
+
+          long_endings or adjectival or verb or noun or remove_last_letter
+        )
+      )
+
+      do derivational
+      do remove_last_2_vowels
+      do remove_last_vowel
+    )
+  )
+)
+
+define stem as (
+  do prelude
+  do mark_regions
+
+  backwards setlimit tomark pV for (
+    min_len
+
+    short_word_4l or short_word_5l or long_word
+
+    do tidy_up
+  )
+)
