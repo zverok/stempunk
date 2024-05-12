@@ -5,6 +5,8 @@ class MatchData
 
   def begin(idx = 0) = _begin(idx)
   def end(idx = 0) = _end(idx)
+
+  def match_before?(pattern) = pre_match.match?(pattern)
 end
 
 class Base
@@ -13,6 +15,7 @@ class Base
   def initialize(word, debug: false)
     @word = word.dup
     @debug = debug
+    @start = 0
   end
 
   attr_reader :word
@@ -28,25 +31,28 @@ class Base
   #
   # If `after:` is provided, the truthy value & the replacement only happens if the found pattern
   # is after the specified position in the word.
-  def sub!(pattern, replacement = nil, after: @after, &block)
-    pattern = /#{pattern}$/
-    if replacement
-      if after
-        word.sub!(pattern) {
-          break if Regexp.last_match.begin < after # don't replace & return `nil`, so next replacement can be chained
-          replacement
-        }
-      else
-        word.sub!(pattern, replacement)
-      end
-    else
-      word.sub!(pattern) { block.call(Regexp.last_match) }
-    end
+  def replace_suffix(pattern, replacement = nil, after: nil, &block)
+    # @start vs after:
+    #   start sets the search scope; after checks post-match
+    # e.g. if we have a pattern "ement|ment|ent" => "", and the word "agreement", then:
+    #  * setting start to 5: "ent" will be found (in the search scope after "agreem") and removed
+    #  * setting after to 5: "ement" will be found, but would not match after: condition, and nothing will be changed
+    m = word.match(/#{pattern}$/, @start) or return
+
+    after && m.begin < after and return
+
+    replacement = block.call(m) if block
+    word[m.begin..m.end] = replacement.to_s
   end
 
   # Remove the specified pattern at the end of the word.
-  def del!(pattern, **)
-    sub!(pattern, '', **)
+  def remove_suffix(pattern, **)
+    replace_suffix(pattern, '', **)
+  end
+
+  # Return true (which potentially stops the chain of `or`-s) if the word has this suffix
+  def keep_suffix(pattern)
+    word.match?(/#{pattern}$/)
   end
 
   # Accepts a {pattern => replacement} hash, finds the first matching pattern, and replaces it with
@@ -54,16 +60,12 @@ class Base
   # If `after:` is provided, and the pattern found is starting before that point, the pattern
   # still considered found (not looking into other patterns), but replacement is not made.
   #
-  def multisub!(patterns, after: nil)
+  def replace_suffixes(patterns, after: nil)
     # Construct an alternate regexp of all patterns, where each one will have its own capture group
     regexp = patterns.keys.map { "(#{_1})" }.join('|').then { /(?:#{_1})/ }
 
-    sub!(regexp) {
-      break if after && _1.begin < after
-
-      # by the index of capture group that is not nil, guess which replacement should be used
-      patterns.values[_1.captures.find_index(&:itself)]
-    }
+    # by the index of capture group that is not nil, guess which replacement should be used
+    replace_suffix(regexp, after:) { patterns.values[_1.captures.find_index(&:itself)] }
   end
 
   # Annotate method to be a formal "step" of the algorithm. This changes the method's behavior only

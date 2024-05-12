@@ -10,8 +10,8 @@ out = File.readlines("data/#{lang}/output.txt", chomp: true)
 t = Time.now
 
 compare = voc.zip(out)
-  .map { [_1, _2, Stemmer.stem(_1)] }
   .tap { puts "Checking: #{_1.count}" }
+  .map { [_1, _2, Stemmer.stem(_1)] }
   .select { _2 != _3 }
   .tap { puts "Fails: #{_1.count}" }
   .map { _1.join(' | ') }
